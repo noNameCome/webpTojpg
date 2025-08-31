@@ -42,3 +42,6 @@
 - 드래그앤드롭_문제해결.md 파일 참고
 - Python이 설치되어 있어야 함
 - 관리자 권한으로 실행 시도
+
+<img width="852" height="832" alt="image" src="https://github.com/user-attachments/assets/0598874a-28f2-4d77-ad5a-9d1e7a73fb89" />
+
