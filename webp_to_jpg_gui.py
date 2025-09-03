@@ -52,8 +52,8 @@ class WebPConverterGUI:
             self.root = tk.Tk()
         
         self.root.title("🔥 WebP >> JPG Converter [ By noName_Come] 🔥")
-        self.root.geometry("850x800")
-        self.root.minsize(700, 750)
+        self.root.geometry("850x900")  # 높이를 800에서 900으로 증가
+        self.root.minsize(700, 850)   # 최소 높이도 750에서 850으로 증가
         self.root.configure(bg=self.colors['bg'])
         
         # 아이콘 설정
@@ -158,9 +158,9 @@ class WebPConverterGUI:
         
         # 드래그 앤 드롭 영역
         if DND_AVAILABLE:
-            drop_text = ">>> DRAG & DROP ZIP FILES HERE <<<\n[MULTIPLE FILES SUPPORTED]\n🎯 OR USE BUTTONS BELOW 🎯"
+            drop_text = ">>> DRAG & DROP HERE <<<\n[ZIP, WEBP FILES + FOLDERS SUPPORTED]\n🎯 OR USE BUTTONS BELOW 🎯"
         else:
-            drop_text = ">>> CLICK 'ADD FILES' BUTTON <<<\n[MULTIPLE FILES SUPPORTED]\n🎯 DRAG & DROP NOT AVAILABLE 🎯"
+            drop_text = ">>> CLICK BUTTONS BELOW <<<\n[ZIP, WEBP FILES + FOLDERS SUPPORTED]\n🎯 DRAG & DROP NOT AVAILABLE 🎯"
         
         self.drop_label = tk.Label(file_frame, 
                                   text=drop_text,
@@ -183,19 +183,69 @@ class WebPConverterGUI:
         # 파일 선택 버튼
         select_button = ttk.Button(button_frame, text="[+] ADD FILES", 
                                   command=self.select_files, style="Hacker.TButton")
-        select_button.grid(row=0, column=0, padx=(0, 10))
+        select_button.grid(row=0, column=0, padx=(0, 5))
+        
+        # 폴더 선택 버튼
+        folder_button = ttk.Button(button_frame, text="[📁] ADD FOLDER", 
+                                  command=self.select_folder, style="Hacker.TButton")
+        folder_button.grid(row=0, column=1, padx=(5, 5))
         
         # 전체 삭제 버튼
         clear_button = ttk.Button(button_frame, text="[X] CLEAR ALL", 
                                  command=self.clear_files, style="Hacker.TButton")
-        clear_button.grid(row=0, column=1, padx=(10, 0))
+        clear_button.grid(row=0, column=2, padx=(5, 0))
         
-        # 선택된 파일 표시
-        self.files_label = tk.Label(file_frame, text=">>> FILES: NONE SELECTED <<<", 
-                                   bg=self.colors['bg'],
-                                   fg=self.colors['accent'],
-                                   font=("Consolas", 9))
-        self.files_label.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
+        # 선택된 파일 목록 표시 (스크롤 가능한 리스트박스로 변경)
+        files_list_frame = tk.Frame(file_frame, bg=self.colors['bg'])
+        files_list_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
+        files_list_frame.columnconfigure(0, weight=1)
+        files_list_frame.rowconfigure(0, weight=1)
+        
+        # 파일 목록 리스트박스 (다중 선택 지원)
+        self.files_listbox = tk.Listbox(files_list_frame, 
+                                       height=5,
+                                       bg=self.colors['entry_bg'],
+                                       fg=self.colors['fg'],
+                                       font=("Consolas", 9),
+                                       selectbackground=self.colors['accent'],
+                                       selectforeground=self.colors['bg'],
+                                       bd=1,
+                                       relief="solid",
+                                       activestyle='none',
+                                       selectmode=tk.EXTENDED)  # 다중 선택 모드 활성화
+        
+        files_scrollbar = tk.Scrollbar(files_list_frame, orient="vertical", 
+                                      command=self.files_listbox.yview,
+                                      bg=self.colors['button_bg'],
+                                      troughcolor=self.colors['bg'],
+                                      activebackground=self.colors['accent'])
+        self.files_listbox.configure(yscrollcommand=files_scrollbar.set)
+        
+        self.files_listbox.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        files_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        
+        # 개별 삭제 버튼
+        remove_button_frame = tk.Frame(file_frame, bg=self.colors['bg'])
+        remove_button_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(5, 0))
+        
+        remove_selected_button = ttk.Button(remove_button_frame, text="[-] REMOVE SELECTED", 
+                                           command=self.remove_selected_files, style="Hacker.TButton")
+        remove_selected_button.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # 다중 선택 안내 라벨
+        multi_select_info = tk.Label(remove_button_frame, 
+                                    text="💡 Ctrl+클릭 또는 Shift+클릭으로 다중 선택 가능", 
+                                    bg=self.colors['bg'],
+                                    fg=self.colors['warning'],
+                                    font=("Consolas", 8))
+        multi_select_info.pack(side=tk.LEFT)
+        
+        # 상태 표시 라벨
+        self.files_status_label = tk.Label(file_frame, text=">>> FILES: NONE SELECTED <<<", 
+                                          bg=self.colors['bg'],
+                                          fg=self.colors['accent'],
+                                          font=("Consolas", 9, "bold"))
+        self.files_status_label.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(5, 0))
         
         # 출력 설정 영역
         output_frame = ttk.LabelFrame(main_frame, text=">>> OUTPUT CONFIG <<<", 
@@ -252,7 +302,7 @@ class WebPConverterGUI:
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
         
-        self.log_text = tk.Text(log_frame, height=16, wrap=tk.WORD,
+        self.log_text = tk.Text(log_frame, height=20, wrap=tk.WORD,  # 높이를 16에서 20으로 증가
                                bg=self.colors['bg'],
                                fg=self.colors['fg'],
                                font=("Consolas", 9),
@@ -326,61 +376,115 @@ class WebPConverterGUI:
             if not files and event.data:
                 files = [event.data.strip().strip('{}')]
             
-            # ZIP 파일만 필터링
-            zip_files = []
-            for file_path in files:
-                if file_path and file_path.lower().endswith('.zip'):
-                    # 경로 정리
-                    clean_path = file_path.strip().strip('"').strip("'")
-                    if Path(clean_path).exists():
-                        zip_files.append(clean_path)
+            # ZIP, WebP 파일 및 폴더 필터링 (개선된 파일 타입 검증)
+            valid_items = []
+            skipped_items = []
             
-            if zip_files:
-                # 기존 파일 목록에 새 파일들 추가 (중복 제거)
-                existing_files = set(self.selected_files)
-                new_files = []
+            for item_path in files:
+                if item_path:
+                    # 경로 정리
+                    clean_path = item_path.strip().strip('"').strip("'")
+                    if Path(clean_path).exists():
+                        path_obj = Path(clean_path)
+                        
+                        # 폴더이거나 지원하는 파일 확장자인 경우
+                        if path_obj.is_dir():
+                            valid_items.append(clean_path)
+                        elif clean_path.lower().endswith(('.zip', '.webp')):
+                            valid_items.append(clean_path)
+                        elif clean_path.lower().endswith(('.jpg', '.jpeg')):
+                            skipped_items.append((clean_path, 'JPG'))
+                        elif clean_path.lower().endswith('.png'):
+                            skipped_items.append((clean_path, 'PNG'))
+                        else:
+                            # 기타 지원되지 않는 파일 타입
+                            skipped_items.append((clean_path, 'UNSUPPORTED'))
+            
+            if valid_items:
+                # 기존 파일 목록에 새 항목들 추가 (중복 제거)
+                existing_items = set(self.selected_files)
+                new_items = []
                 
-                for file_path in zip_files:
-                    if file_path not in existing_files:
-                        self.selected_files.append(file_path)
-                        new_files.append(file_path)
+                for item_path in valid_items:
+                    if item_path not in existing_items:
+                        self.selected_files.append(item_path)
+                        new_items.append(item_path)
                 
                 self.update_files_display()
                 
-                if new_files:
-                    self.log_message(f"드래그 앤 드롭으로 {len(new_files)}개 파일이 추가되었습니다:")
-                    for i, file_path in enumerate(new_files, 1):
-                        self.log_message(f"  {i}. {Path(file_path).name}")
-                    self.log_message(f"총 선택된 파일: {len(self.selected_files)}개")
+                if new_items:
+                    self.log_message(f"드래그 앤 드롭으로 {len(new_items)}개 항목이 추가되었습니다:")
+                    for i, item_path in enumerate(new_items, 1):
+                        item_type = "📁 폴더" if Path(item_path).is_dir() else "📄 파일"
+                        self.log_message(f"  {i}. {item_type}: {Path(item_path).name}")
+                    self.log_message(f"총 선택된 항목: {len(self.selected_files)}개")
                 else:
-                    self.log_message("⚠️ 선택한 파일들이 이미 목록에 있습니다.")
-            else:
+                    self.log_message("⚠️ 선택한 항목들이 이미 목록에 있습니다.")
+            
+            # 스킵된 파일들에 대한 메시지 표시
+            if skipped_items:
+                self.log_message(f"\n📋 변환 패스된 파일들 ({len(skipped_items)}개):")
+                for file_path, file_type in skipped_items:
+                    file_name = Path(file_path).name
+                    if file_type == 'JPG':
+                        self.log_message(f"  📸 {file_name} - JPG 파일이라서 변환 패스")
+                    elif file_type == 'PNG':
+                        self.log_message(f"  🖼️ {file_name} - PNG 파일이라서 변환 패스")
+                    else:
+                        self.log_message(f"  ❓ {file_name} - 지원되지 않는 파일 형식")
+            
+            if not valid_items and not skipped_items:
                 if files:
-                    self.log_message("⚠️ ZIP 파일만 선택할 수 있습니다.")
-                    self.log_message(f"감지된 파일들: {files}")
+                    self.log_message("⚠️ 인식할 수 있는 파일이 없습니다.")
+                    self.log_message(f"감지된 항목들: {files}")
                 else:
-                    self.log_message("⚠️ 드래그한 파일을 인식할 수 없습니다.")
+                    self.log_message("⚠️ 드래그한 항목을 인식할 수 없습니다.")
                     
         except Exception as e:
             self.log_message(f"❌ 드래그 앤 드롭 처리 오류: {e}")
             self.log_message("💡 '파일 선택' 버튼을 사용해보세요.")
     
+    def select_folder(self):
+        """폴더 선택 대화상자"""
+        folder_path = filedialog.askdirectory(title="WebP 파일이 있는 폴더 선택")
+        
+        if folder_path:
+            # 기존 파일 목록에 폴더 추가 (중복 제거)
+            existing_files = set(self.selected_files)
+            
+            if folder_path not in existing_files:
+                self.selected_files.append(folder_path)
+                self.update_files_display()
+                self.log_message(f"폴더가 추가되었습니다: {Path(folder_path).name}")
+                self.log_message(f"총 선택된 항목: {len(self.selected_files)}개")
+            else:
+                self.log_message("⚠️ 선택한 폴더가 이미 목록에 있습니다.")
+
     def select_files(self):
         """파일 선택 대화상자"""
         files = filedialog.askopenfilenames(
-            title="ZIP 파일 선택",
-            filetypes=[("ZIP files", "*.zip"), ("All files", "*.*")]
+            title="ZIP 또는 WebP 파일 선택",
+            filetypes=[("Supported files", "*.zip;*.webp"), ("ZIP files", "*.zip"), ("WebP files", "*.webp"), ("All files", "*.*")]
         )
         
         if files:
-            # 기존 파일 목록에 새 파일들 추가 (중복 제거)
+            # 기존 파일 목록에 새 파일들 추가 (중복 제거) 및 파일 타입 검증
             existing_files = set(self.selected_files)
             new_files = []
+            skipped_files = []
             
             for file_path in files:
                 if file_path not in existing_files:
-                    self.selected_files.append(file_path)
-                    new_files.append(file_path)
+                    # 파일 타입 검증
+                    if file_path.lower().endswith(('.zip', '.webp')):
+                        self.selected_files.append(file_path)
+                        new_files.append(file_path)
+                    elif file_path.lower().endswith(('.jpg', '.jpeg')):
+                        skipped_files.append((file_path, 'JPG'))
+                    elif file_path.lower().endswith('.png'):
+                        skipped_files.append((file_path, 'PNG'))
+                    else:
+                        skipped_files.append((file_path, 'UNSUPPORTED'))
             
             self.update_files_display()
             
@@ -389,8 +493,20 @@ class WebPConverterGUI:
                 for i, file_path in enumerate(new_files, 1):
                     self.log_message(f"  {i}. {Path(file_path).name}")
                 self.log_message(f"총 선택된 파일: {len(self.selected_files)}개")
-            else:
+            elif not skipped_files:
                 self.log_message("⚠️ 선택한 파일들이 이미 목록에 있습니다.")
+            
+            # 스킵된 파일들에 대한 메시지 표시
+            if skipped_files:
+                self.log_message(f"\n📋 변환 패스된 파일들 ({len(skipped_files)}개):")
+                for file_path, file_type in skipped_files:
+                    file_name = Path(file_path).name
+                    if file_type == 'JPG':
+                        self.log_message(f"  📸 {file_name} - JPG 파일이라서 변환 패스")
+                    elif file_type == 'PNG':
+                        self.log_message(f"  🖼️ {file_name} - PNG 파일이라서 변환 패스")
+                    else:
+                        self.log_message(f"  ❓ {file_name} - 지원되지 않는 파일 형식")
     
     def clear_files(self):
         """선택된 파일 목록 전체 삭제"""
@@ -401,6 +517,36 @@ class WebPConverterGUI:
         else:
             self.log_message("제거할 파일이 없습니다.")
     
+    def remove_selected_files(self):
+        """리스트박스에서 선택된 파일들 삭제 (다중 선택 지원)"""
+        selected_indices = self.files_listbox.curselection()
+        
+        if not selected_indices:
+            self.log_message("⚠️ 삭제할 파일을 선택해주세요.")
+            self.log_message("💡 팁: Ctrl+클릭으로 여러 파일 선택, Shift+클릭으로 범위 선택 가능")
+            return
+        
+        # 선택된 파일들의 이름 가져오기 (뒤에서부터 삭제해야 인덱스가 안 꼬임)
+        removed_files = []
+        selection_count = len(selected_indices)
+        
+        for index in reversed(selected_indices):
+            if 0 <= index < len(self.selected_files):
+                removed_file = self.selected_files.pop(index)
+                removed_files.append(Path(removed_file).name)
+        
+        self.update_files_display()
+        
+        if removed_files:
+            if selection_count == 1:
+                self.log_message(f"📝 1개 항목이 목록에서 제거되었습니다:")
+            else:
+                self.log_message(f"📝 {len(removed_files)}개 항목이 다중 선택으로 제거되었습니다:")
+            
+            for file_name in reversed(removed_files):  # 원래 순서대로 표시
+                self.log_message(f"  - {file_name}")
+            self.log_message(f"남은 항목: {len(self.selected_files)}개")
+    
     def select_output_directory(self):
         """출력 폴더 선택 대화상자"""
         directory = filedialog.askdirectory(title="출력 폴더 선택")
@@ -408,21 +554,36 @@ class WebPConverterGUI:
             self.output_directory.set(directory)
     
     def update_files_display(self):
-        """선택된 파일 목록 표시 업데이트"""
+        """선택된 파일/폴더 목록 표시 업데이트"""
+        # 리스트박스 내용 업데이트
+        self.files_listbox.delete(0, tk.END)
+        
         if not self.selected_files:
-            self.files_label.config(text=">>> FILES: NONE SELECTED <<<", fg=self.colors['accent'])
+            self.files_status_label.config(text=">>> FILES: NONE SELECTED <<<", fg=self.colors['accent'])
+            self.files_listbox.insert(0, ">>> 파일을 추가하려면 위의 버튼을 사용하거나 드래그 앤 드롭 하세요 <<<")
+            self.files_listbox.config(state='disabled')
         else:
-            file_count = len(self.selected_files)
-            if file_count == 1:
-                display_text = f">>> LOADED: {Path(self.selected_files[0]).name} <<<"
-            elif file_count <= 3:
-                file_names = [Path(f).name for f in self.selected_files]
-                display_text = f">>> LOADED ({file_count}): {' | '.join(file_names)} <<<"
-            else:
-                first_files = [Path(f).name for f in self.selected_files[:2]]
-                display_text = f">>> LOADED ({file_count}): {' | '.join(first_files)} + {file_count-2} MORE <<<"
+            self.files_listbox.config(state='normal')
+            item_count = len(self.selected_files)
             
-            self.files_label.config(text=display_text, fg=self.colors['success'])
+            # 리스트박스에 모든 파일 표시
+            for i, file_path in enumerate(self.selected_files):
+                item_path = Path(file_path)
+                item_type = "📁" if item_path.is_dir() else "📄"
+                # 파일 확장자에 따른 추가 아이콘
+                if file_path.lower().endswith('.zip'):
+                    item_type = "📦"
+                elif file_path.lower().endswith('.webp'):
+                    item_type = "🖼️"
+                
+                display_text = f"{item_type} {item_path.name}"
+                self.files_listbox.insert(tk.END, display_text)
+            
+            # 상태 라벨 업데이트
+            self.files_status_label.config(
+                text=f">>> LOADED: {item_count} ITEMS | MULTI-SELECT & REMOVE <<<", 
+                fg=self.colors['success']
+            )
     
     def log_message(self, message):
         """로그 메시지 출력"""
@@ -478,7 +639,16 @@ class WebPConverterGUI:
                 self.message_queue.put(("log", f"\n[{i+1}/{total_files}] 처리 중: {Path(file_path).name}"))
                 
                 try:
-                    success = self.process_single_file(file_path)
+                    # 파일/폴더 타입에 따라 처리 방법 결정
+                    if Path(file_path).is_dir():
+                        success = self.process_folder(file_path)
+                    elif file_path.lower().endswith('.zip'):
+                        success = self.process_zip_file(file_path)
+                    elif file_path.lower().endswith('.webp'):
+                        success = self.process_webp_file(file_path)
+                    else:
+                        success = False
+                        
                     if success:
                         successful_count += 1
                         self.message_queue.put(("log", f"✅ 완료: {Path(file_path).name}"))
@@ -522,7 +692,113 @@ class WebPConverterGUI:
             # UI 상태 복원
             self.message_queue.put(("finish", None))
     
-    def process_single_file(self, input_zip_path):
+    def process_folder(self, folder_path):
+        """폴더 내 WebP 파일들 처리 (폴더 구조 유지)"""
+        folder = Path(folder_path)
+        output_dir = Path(self.output_directory.get())
+        
+        # 출력 폴더에 원본 폴더 이름으로 새 폴더 생성
+        output_folder = output_dir / folder.name
+        
+        try:
+            self.message_queue.put(("log", "  📁 폴더 스캔 중..."))
+            
+            # 폴더 내 모든 이미지 파일 찾기 (하위 폴더 포함)
+            webp_files = list(folder.rglob("*.webp"))
+            jpg_files = list(folder.rglob("*.jpg")) + list(folder.rglob("*.jpeg"))
+            png_files = list(folder.rglob("*.png"))
+            
+            if not webp_files:
+                self.message_queue.put(("log", "  ⚠️ 폴더 내에 WebP 파일을 찾을 수 없습니다"))
+                return False
+            
+            self.message_queue.put(("log", f"  📄 {len(webp_files)}개의 WebP 파일 발견"))
+            
+            # JPG/PNG 파일에 대한 패스 메시지
+            if jpg_files:
+                self.message_queue.put(("log", f"  📸 {len(jpg_files)}개의 JPG 파일 - 변환 패스"))
+            if png_files:
+                self.message_queue.put(("log", f"  🖼️ {len(png_files)}개의 PNG 파일 - 변환 패스"))
+            
+            self.message_queue.put(("log", f"  📂 출력 폴더: {output_folder.name}"))
+            
+            converted_count = 0
+            failed_count = 0
+            
+            for webp_file in webp_files:
+                try:
+                    # 원본 폴더 기준 상대 경로 유지해서 출력 경로 생성
+                    relative_path = webp_file.relative_to(folder)
+                    output_path = output_folder / relative_path.with_suffix('.jpg')
+                    
+                    # 출력 디렉토리 생성 (하위 폴더 구조 유지)
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    # WebP를 JPG로 변환
+                    with Image.open(webp_file) as img:
+                        if img.mode in ('RGBA', 'LA'):
+                            background = Image.new('RGB', img.size, (255, 255, 255))
+                            if img.mode == 'RGBA':
+                                background.paste(img, mask=img.split()[-1])
+                            else:
+                                background.paste(img)
+                            img = background
+                        elif img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        
+                        img.save(output_path, 'JPEG', quality=95)
+                    
+                    converted_count += 1
+                    # 상대 경로로 표시해서 폴더 구조 확인 가능
+                    self.message_queue.put(("log", f"    ✅ {relative_path} → {relative_path.with_suffix('.jpg')}"))
+                    
+                except Exception as e:
+                    failed_count += 1
+                    self.message_queue.put(("log", f"    ❌ {relative_path} 변환 실패: {str(e)}"))
+            
+            if converted_count == 0:
+                return False
+            
+            self.message_queue.put(("log", f"  ✨ 폴더 처리 완료: {converted_count}개 성공, {failed_count}개 실패"))
+            self.message_queue.put(("log", f"  📂 결과 저장됨: {output_folder}"))
+            return True
+            
+        except Exception as e:
+            self.message_queue.put(("log", f"  💥 폴더 처리 중 오류: {str(e)}"))
+            return False
+
+    def process_webp_file(self, input_webp_path):
+        """단일 WebP 파일 처리"""
+        input_path = Path(input_webp_path)
+        output_dir = Path(self.output_directory.get())
+        output_path = output_dir / input_path.with_suffix('.jpg').name
+        
+        try:
+            self.message_queue.put(("log", "  🖼️ WebP 이미지 로딩 중..."))
+            
+            # WebP를 JPG로 변환
+            with Image.open(input_webp_path) as img:
+                if img.mode in ('RGBA', 'LA'):
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'RGBA':
+                        background.paste(img, mask=img.split()[-1])
+                    else:
+                        background.paste(img)
+                    img = background
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+                
+                self.message_queue.put(("log", "  ✨ JPG로 변환 중..."))
+                img.save(output_path, 'JPEG', quality=95)
+            
+            self.message_queue.put(("log", f"  💾 저장 완료: {output_path.name}"))
+            return True
+            
+        except Exception as e:
+            self.message_queue.put(("log", f"  💥 처리 중 오류: {str(e)}"))
+            return False
+    
+    def process_zip_file(self, input_zip_path):
         """단일 ZIP 파일 처리"""
         input_path = Path(input_zip_path)
         output_path = Path(self.output_directory.get()) / input_path.name
@@ -537,14 +813,22 @@ class WebPConverterGUI:
                 with zipfile.ZipFile(input_zip_path, 'r') as zip_ref:
                     zip_ref.extractall(extract_dir)
                 
-                # 2. WebP 파일 찾기 및 변환
+                # 2. 이미지 파일 찾기 및 변환
                 webp_files = list(extract_dir.rglob("*.webp"))
+                jpg_files = list(extract_dir.rglob("*.jpg")) + list(extract_dir.rglob("*.jpeg"))
+                png_files = list(extract_dir.rglob("*.png"))
                 
                 if not webp_files:
                     self.message_queue.put(("log", "  ⚠️ WebP 파일을 찾을 수 없습니다"))
                     return False
                 
                 self.message_queue.put(("log", f"  📁 {len(webp_files)}개의 WebP 파일 발견"))
+                
+                # JPG/PNG 파일에 대한 패스 메시지
+                if jpg_files:
+                    self.message_queue.put(("log", f"  📸 {len(jpg_files)}개의 JPG 파일 - 변환 패스"))
+                if png_files:
+                    self.message_queue.put(("log", f"  🖼️ {len(png_files)}개의 PNG 파일 - 변환 패스"))
                 
                 converted_count = 0
                 for webp_file in webp_files:
@@ -635,19 +919,6 @@ class WebPConverterGUI:
 🔥 WebP >> JPG CONVERTER v2.0 🔥
 ================================
 
->>> OPERATION MANUAL <<<
-[1] DRAG & DROP: Target ZIP files into input zone
-[2] ADD FILES: Use [+] ADD FILES button for multiple selection
-[3] CONFIG: Set target directory for output
-[4] EXECUTE: Hit the conversion button to begin operation
-
->>> SYSTEM CAPABILITIES <<<
-✅ MULTI-FILE PROCESSING
-✅ DRAG & DROP INTERFACE  
-✅ REAL-TIME PROGRESS MONITORING
-✅ HIGH-QUALITY JPG OUTPUT (95%)
-✅ STEALTH MODE (NO CMD WINDOW)
-
 >>> STATUS: SYSTEM READY <<<
 Awaiting user input..."""
 
@@ -679,3 +950,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
