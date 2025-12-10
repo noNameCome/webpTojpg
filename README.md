@@ -26,5 +26,4 @@
 - Python이 설치되어 있어야 함
 - 관리자 권한으로 실행 시도
 
-<img width="852" height="832" alt="image" src="https://github.com/user-attachments/assets/0598874a-28f2-4d77-ad5a-9d1e7a73fb89" />
-
+<img width="852" height="930" alt="image" src="https://github.com/user-attachments/assets/6c28bd20-e84d-4590-b410-f78089529d2f" />
